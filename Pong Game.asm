@@ -8,12 +8,22 @@ BALL_Y DB 2          ; Starting Y (row)
 
 TEMP_TIME DB 0       ; comparing time vairable
 
-WINDOW_WIDTH DB 4Fh
+WINDOW_WIDTH DB 4Fh     
 WINDOW_HEIGHT DB 18h
 
 
-INCREMENT_POSITION_X DB 2
+INCREMENT_POSITION_X DB 2        ; speed of ball
 INCREMENT_POSITION_Y DB 2
+
+
+PADDLE_LEFT_X DB 01h
+PADDLE_LEFT_Y DB 00h
+
+
+PADDLE_RIGHT_X DB 4Eh
+PADDLE_RIGHT_Y DB 12h
+
+PADDLE_SIZE DW 5
 
 .CODE
 
@@ -41,11 +51,13 @@ MAIN PROC
         MOV TEMP_TIME, DL   
     
         CALL ERASE_BALL    
-        
+                
         CALL MOVE_BALL
-                 
-    
-        CALL DRAW_BALL     
+            
+        CALL DRAW_BALL
+        
+        
+        CALL DRAW_PADDLE     
     
         JMP TIME_LOOP     
                           
@@ -68,7 +80,7 @@ DRAW_BALL PROC
     INT 10h
 
     MOV AH, 0Eh        ; Print character
-    MOV AL, '*'        ; Ball shape
+    MOV AL, 02h        ; Ball shape
     MOV BH, 00h
     INT 10h
 
@@ -149,6 +161,57 @@ MOVE_BALL PROC
 
 MOVE_BALL ENDP
 
+;---------------------------------------------------
+
+DRAW_PADDLE PROC
+    
+    ;DRAWING LEFT PADDLE
+    MOV DH, PADDLE_LEFT_Y        ; Set row (Y-axis)
+    MOV DL, PADDLE_LEFT_X        ; Set column (X-axis)
+    MOV CX, PADDLE_SIZE          ; Snake size 
+
+    DRAW_BODY_LEFT:
+        ; Set cursor position
+        MOV AH, 02h             ; Function: Set cursor position
+        MOV BH, 00h             ; Page number
+        INT 10h
+    
+        ; Print the character
+        MOV AH, 0Eh             ; Function: Print character at cursor position
+        MOV AL, 02h             ; Character to print
+        MOV BH, 00h             ; Page number
+        INT 10h
+    
+        INC DH                 
+        LOOP DRAW_BODY_LEFT
+        
+        
+    ;DRAWING RIGHT PADDLE
+    MOV DH, PADDLE_RIGHT_Y        ; Set row (Y-axis)
+    MOV DL, PADDLE_RIGHT_X        ; Set column (X-axis)
+    MOV CX, PADDLE_SIZE          ; Snake size 
+
+    DRAW_BODY_RIGHT:
+        ; Set cursor position
+        MOV AH, 02h             ; Function: Set cursor position
+        MOV BH, 00h             ; Page number
+        INT 10h
+    
+        ; Print the character
+        MOV AH, 0Eh             ; Function: Print character at cursor position
+        MOV AL, 02h             ; Character to print
+        MOV BH, 00h             ; Page number
+        INT 10h
+    
+        INC DH                 
+        LOOP DRAW_BODY_RIGHT
+        
+                 
+
+    RET
+
+    
+DRAW_PADDLE ENDP
 
 
 END MAIN
