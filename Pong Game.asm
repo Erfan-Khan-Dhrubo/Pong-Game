@@ -17,13 +17,14 @@ INCREMENT_POSITION_Y DB 2
 
 
 PADDLE_LEFT_X DB 01h
-PADDLE_LEFT_Y DB 00h
+PADDLE_LEFT_Y DB 12h
 
 
 PADDLE_RIGHT_X DB 4Eh
 PADDLE_RIGHT_Y DB 12h
 
 PADDLE_SIZE DW 5
+PADDLE_MOVING_SPEED DB 2
 
 .CODE
 
@@ -55,6 +56,8 @@ MAIN PROC
         CALL MOVE_BALL
             
         CALL DRAW_BALL
+        
+        CALL MOVE_PADDLE
         
         
         CALL DRAW_PADDLE     
@@ -212,6 +215,193 @@ DRAW_PADDLE PROC
 
     
 DRAW_PADDLE ENDP
+
+;---------------------------------------------------
+
+
+MOVE_PADDLE PROC
+    
+    
+    MOV AH, 01h         ; check if any key is press or not
+    INT 16h             ; int for checking keys
+    JZ EXIT            ; if zero flag is set to 1 jump
+                        ; zf=1 if no key is pressed or zf=0
+                        
+    
+    MOV AH, 00h         ; get the ASCII value of the key which is pressed
+    INT 16h             ; and store in AL
+    
+    
+    ;CHECKING FOR LEFT PADDLE
+    CMP AL, 77h                 ; if w is pressed (left paddle up)
+    JE MOVE_LEFT_PADDLE_UP
+    
+    
+    CMP AL, 73h
+    JE  MOVE_LEFT_PADDLE_DOWN  ; if s is pressed (left paddle down)
+    
+    
+    ;CHECKING FOR RIGHT PADDLE
+    CMP AL, 6Fh                 ; if o is pressed (right paddle up)
+    JE MOVE_RIGHT_PADDLE_UP
+    
+    
+    CMP AL, 6Ch
+    JE  MOVE_RIGHT_PADDLE_DOWN  ; if l is pressed (right paddle down)
+    
+    
+    
+    EXIT:
+    
+    
+    
+    RET 
+    
+    
+    
+    ;---------------------------------------------------
+    
+    
+    ; HANDLING LEFT PADDLE
+                                                 
+    MOVE_LEFT_PADDLE_UP:
+    
+        CALL REMOVE_PADDLE_LEFT         ; remove the previous paddle
+        
+        MOV AL, PADDLE_MOVING_SPEED
+        SUB PADDLE_LEFT_Y, AL           ; decresing the paddle y positon
+        
+        CMP PADDLE_LEFT_Y, 00h
+        JL HOLD_PADDLE_LEFT_UP          ; if paddle y-axis position < 0
+        RET
+        
+        
+        HOLD_PADDLE_LEFT_UP:
+            MOV PADDLE_LEFT_Y, 00h      ; setting y-asis value to 0 so that
+            RET                         ; the paddle do not get out from screen
+        
+        
+        
+     MOVE_LEFT_PADDLE_DOWN:
+    
+        CALL REMOVE_PADDLE_LEFT
+        
+        MOV AL, PADDLE_MOVING_SPEED
+        ADD PADDLE_LEFT_Y, AL
+        
+        CMP PADDLE_LEFT_Y, 13h
+        JG HOLD_PADDLE_LEFT_DOWN
+        RET
+        
+        
+        HOLD_PADDLE_LEFT_DOWN:
+            MOV PADDLE_LEFT_Y, 14h
+            RET
+            
+             
+             
+     ;---------------------------------------------------
+     
+     ; HANDLING RIGHT PADDLE
+      
+     MOVE_RIGHT_PADDLE_UP:
+    
+        CALL REMOVE_PADDLE_RIGHT         ; remove the previous paddle
+        
+        MOV AL, PADDLE_MOVING_SPEED
+        SUB PADDLE_RIGHT_Y, AL           ; decresing the paddle y positon
+        
+        CMP PADDLE_RIGHT_Y, 00h
+        JL HOLD_PADDLE_RIGHT_UP          ; if paddle y-axis position < 0
+        RET
+        
+        
+        HOLD_PADDLE_RIGHT_UP:
+            MOV PADDLE_RIGHT_Y, 00h      ; setting y-asis value to 0 so that
+            RET                         ; the paddle do not get out from screen
+        
+        
+        
+     MOVE_RIGHT_PADDLE_DOWN:
+    
+        CALL REMOVE_PADDLE_RIGHT
+        
+        MOV AL, PADDLE_MOVING_SPEED
+        ADD PADDLE_RIGHT_Y, AL
+        
+        CMP PADDLE_RIGHT_Y, 13h
+        JG HOLD_PADDLE_RIGHT_DOWN
+        RET
+        
+        
+        HOLD_PADDLE_RIGHT_DOWN:
+            MOV PADDLE_RIGHT_Y, 14h
+            RET
+        
+      
+                                                 
+                                                 
+ 
+                                                 
+MOVE_PADDLE ENDP
+
+;---------------------------------------------------
+
+REMOVE_PADDLE_LEFT PROC
+    
+    
+    MOV DH, PADDLE_LEFT_Y        ; Set row (Y-axis)
+    MOV DL, PADDLE_LEFT_X        ; Set column (X-axis)
+    MOV CX, PADDLE_SIZE          ; Snake size 
+
+    DRAW_BODY_LEFT_X:
+        ; Set cursor position
+        MOV AH, 02h             ; Function: Set cursor position
+        MOV BH, 00h             ; Page number
+        INT 10h
+    
+        ; Print the character
+        MOV AH, 0Eh             ; Function: Print character at cursor position
+        MOV AL, " "             ; Character to print
+        MOV BH, 00h             ; Page number
+        INT 10h
+    
+        INC DH                 
+        LOOP DRAW_BODY_LEFT_X
+        
+        
+    RET
+    
+REMOVE_PADDLE_LEFT ENDP
+
+;---------------------------------------------------
+
+REMOVE_PADDLE_RIGHT PROC
+    
+    
+    MOV DH, PADDLE_RIGHT_Y        ; Set row (Y-axis)
+    MOV DL, PADDLE_RIGHT_X        ; Set column (X-axis)
+    MOV CX, PADDLE_SIZE          ; Snake size 
+
+    DRAW_BODY_RIGHT_X:
+        ; Set cursor position
+        MOV AH, 02h             ; Function: Set cursor position
+        MOV BH, 00h             ; Page number
+        INT 10h
+    
+        ; Print the character
+        MOV AH, 0Eh             ; Function: Print character at cursor position
+        MOV AL, " "             ; Character to print
+        MOV BH, 00h             ; Page number
+        INT 10h
+    
+        INC DH                 
+        LOOP DRAW_BODY_RIGHT_X
+        
+        
+    RET
+    
+REMOVE_PADDLE_RIGHT ENDP
 
 
 END MAIN
