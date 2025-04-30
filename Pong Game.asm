@@ -3,28 +3,34 @@
 
 .DATA
 
-BALL_X DB 5          ; Starting X (column)
-BALL_Y DB 2          ; Starting Y (row)
+RESTART_X DB 10                 ; restarting position
+RESTART_Y DB 10
 
-TEMP_TIME DB 0       ; comparing time vairable
+BALL_X DB 5                     ; Starting X (column)
+BALL_Y DB 2                     ; Starting Y (row)
 
-WINDOW_WIDTH DB 4Fh     
+TEMP_TIME DB 0                  ; comparing time vairable
+
+WINDOW_WIDTH DB 1Fh             ; 4Fh for full screen
 WINDOW_HEIGHT DB 18h
 
 
-INCREMENT_POSITION_X DB 2        ; speed of ball
-INCREMENT_POSITION_Y DB 2
+INCREMENT_POSITION_X DB 1       ; speed of ball x
+INCREMENT_POSITION_Y DB 1       ; speed of ball x
 
 
-PADDLE_LEFT_X DB 01h
+PADDLE_LEFT_X DB 03h            ; position of paddle right
 PADDLE_LEFT_Y DB 12h
 
 
-PADDLE_RIGHT_X DB 4Eh
-PADDLE_RIGHT_Y DB 12h
+PADDLE_RIGHT_X DB 1Ch           ; 4Ch for full screen
+PADDLE_RIGHT_Y DB 12h           ; position of paddle left
 
 PADDLE_SIZE DW 5
 PADDLE_MOVING_SPEED DB 2
+
+COLISSION_PADDLE_LEFT_X DB ?    ; storing paddle collision info
+COLISSION_PADDLE_LEFT_Y DB ?
 
 .CODE
 
@@ -50,16 +56,20 @@ MAIN PROC
     
         
         MOV TEMP_TIME, DL   
-    
+        
+        ; REMOVING THE PREVIOUS POSITION OF THE BALL
         CALL ERASE_BALL    
-                
+        
+        ; MAKING THE BALL MOVE        
         CALL MOVE_BALL
-            
+        
+        ; DRAWING THE NEW POSITION OF THE BALL    
         CALL DRAW_BALL
         
+        ; MOVE PADDLE IF THERE ARE ANY INPUT
         CALL MOVE_PADDLE
         
-        
+        ; DRAW THE PADDLE
         CALL DRAW_PADDLE     
     
         JMP TIME_LOOP     
@@ -113,43 +123,89 @@ ERASE_BALL ENDP
 MOVE_BALL PROC 
     
     MOV AL, INCREMENT_POSITION_X      ; changing x position
-    ADD BALL_X, AL
+    ADD BALL_X, AL 
     
-    ; Check X collision
-    CMP BALL_X, 0                     ; if ball_x < 0
-    JL BOUNCE_X_LEFT
-    MOV AL, WINDOW_WIDTH
-    CMP BALL_X, AL                    ; if ball_x > window width
-    JG BOUNCE_X_RIGHT
-
-    
-    MOV AL, INCREMENT_POSITION_Y      ; changing x position
+    MOV AL, INCREMENT_POSITION_Y      ; changing Y position
     ADD BALL_Y, AL
     
-    ; Check Y collision
+    
+    ;---------------------------------------------------
+    
+    ; CHECKING THE RIGHT PADDLE COLLISION
+    MOV AL, PADDLE_RIGHT_X
+    CMP BALL_X, AL
+    JL CHECK_LEFT_PADDLE            ; if ball_x is less than paddle x-axis
+    
+                                                                              
+    MOV BL, PADDLE_RIGHT_Y
+    MOV CX, PADDLE_SIZE
+    
+    RIGHT_PADDLE_COLLISION_CHECK:         ; for i in range(paddle length)
+        MOV COLISSION_PADDLE_LEFT_Y, BL
+        CMP BALL_Y, BL                    ; if ball_x == paddle any position revert the ball velosity
+        JE BOUNCE_LEFT_PADDLE
+        INC BL
+        LOOP RIGHT_PADDLE_COLLISION_CHECK
+    
+    
+    ;---------------------------------------------------
+    
+    
+    CHECK_LEFT_PADDLE:
+    ; CHECKING THE LEFT PADDLE COLLISION
+    MOV AL, PADDLE_LEFT_X
+    CMP BALL_X, AL
+    JG OTHER_COLLISION            ; if ball_x is GREATER than paddle x-axis
+    
+                                                                              
+    MOV BL, PADDLE_LEFT_Y
+    MOV CX, PADDLE_SIZE
+    
+    LEFT_PADDLE_COLLISION_CHECK:         ; for i in range(paddle length)
+        MOV COLISSION_PADDLE_LEFT_X, BL
+        CMP BALL_Y, BL                    ; if ball_x == paddle any position revert the ball velosity
+        JE BOUNCE_RIGHT_PADDLE
+        INC BL
+        LOOP LEFT_PADDLE_COLLISION_CHECK
+    
+    
+    OTHER_COLLISION:
+    
+    ;---------------------------------------------------
+    
+    ; CHECKING X-AXIS COLLISION
+    CMP BALL_X, 0                     ; if ball_x < 0
+    JL BOUNCE_X_RESTART
+    MOV AL, WINDOW_WIDTH
+    CMP BALL_X, AL                    ; if ball_x > window width
+    JG BOUNCE_X_RESTART
+
+    
+    
+    ; CHECKING Y-AXIS COLLISION
     CMP BALL_Y, 0                     ; if ball_y < 0
     JL BOUNCE_Y_TOP
     MOV AL, WINDOW_HEIGHT
     CMP BALL_Y, AL                    ; if ball_y > window height
     JG BOUNCE_Y_BOTTOM
+    
 
     RET
 
-
-    ; Handle bounces:
-    ; reverse the direction
-    ; setting new position 
-        
-    BOUNCE_X_LEFT:
-        NEG INCREMENT_POSITION_X
-        MOV BALL_X, 0
-        RET
+    ;---------------------------------------------------
     
-    BOUNCE_X_RIGHT:
-        NEG INCREMENT_POSITION_X
-        MOV AL, WINDOW_WIDTH
+    ; HANDLE BOUNCES
+        
+    BOUNCE_X_RESTART:
+        MOV AL, RESTART_X           ; setting the ball to restart postion
         MOV BALL_X, AL
+        MOV AL, RESTART_Y
+        MOV BALL_Y, AL
         RET
+
+        
+    ; REVERSE THE DIRECTION
+    ; SETTING NEW POSITION
     
     BOUNCE_Y_TOP:
         NEG INCREMENT_POSITION_Y
@@ -160,7 +216,36 @@ MOVE_BALL PROC
         NEG INCREMENT_POSITION_Y
         MOV AL, WINDOW_HEIGHT
         MOV BALL_Y, AL
-        RET    
+        RET
+    
+    
+    ;---------------------------------------------------
+        
+    ; HANDLING LEFT PADDLE BOUNCE    
+    BOUNCE_LEFT_PADDLE:    
+        NEG INCREMENT_POSITION_X                 ; change the velocity x asis
+        MOV AL, COLISSION_PADDLE_LEFT_Y
+        MOV BALL_Y, AL
+        MOV AL, PADDLE_RIGHT_X                   ; set the ball postion the point
+        MOV BALL_X, AL                           ; where the ball collide        
+        
+        JMP CHECK_LEFT_PADDLE                    ; jump to left paddle cheking
+        
+        
+    ; HANDLING RIGHT PADDLE BOUNCE    
+    BOUNCE_RIGHT_PADDLE:    
+        NEG INCREMENT_POSITION_X                 ; change the velocity x asis
+        MOV AL, COLISSION_PADDLE_LEFT_X
+        MOV BALL_Y, AL
+        MOV AL, PADDLE_LEFT_X                   ; set the ball postion the point
+        MOV BALL_X, AL                           ; where the ball collide        
+        
+        JMP OTHER_COLLISION                    ; jump to  OTHER_COLLISION
+                                                 
+    
+    
+    
+        
 
 MOVE_BALL ENDP
 
@@ -174,12 +259,12 @@ DRAW_PADDLE PROC
     MOV CX, PADDLE_SIZE          ; Snake size 
 
     DRAW_BODY_LEFT:
-        ; Set cursor position
+        ; SET CURSOR POSITION
         MOV AH, 02h             ; Function: Set cursor position
         MOV BH, 00h             ; Page number
         INT 10h
     
-        ; Print the character
+        ; PRINT THE CHARACTER
         MOV AH, 0Eh             ; Function: Print character at cursor position
         MOV AL, 02h             ; Character to print
         MOV BH, 00h             ; Page number
@@ -195,12 +280,12 @@ DRAW_PADDLE PROC
     MOV CX, PADDLE_SIZE          ; Snake size 
 
     DRAW_BODY_RIGHT:
-        ; Set cursor position
+        ; SET CURSOR POSITION
         MOV AH, 02h             ; Function: Set cursor position
         MOV BH, 00h             ; Page number
         INT 10h
     
-        ; Print the character
+        ; PRINT THE CHARACTER
         MOV AH, 0Eh             ; Function: Print character at cursor position
         MOV AL, 02h             ; Character to print
         MOV BH, 00h             ; Page number
@@ -226,8 +311,7 @@ MOVE_PADDLE PROC
     INT 16h             ; int for checking keys
     JZ EXIT            ; if zero flag is set to 1 jump
                         ; zf=1 if no key is pressed or zf=0
-                        
-    
+                            
     MOV AH, 00h         ; get the ASCII value of the key which is pressed
     INT 16h             ; and store in AL
     
@@ -248,12 +332,10 @@ MOVE_PADDLE PROC
     
     CMP AL, 6Ch
     JE  MOVE_RIGHT_PADDLE_DOWN  ; if l is pressed (right paddle down)
-    
-    
+        
     
     EXIT:
-    
-    
+        
     
     RET 
     
@@ -337,12 +419,7 @@ MOVE_PADDLE PROC
         HOLD_PADDLE_RIGHT_DOWN:
             MOV PADDLE_RIGHT_Y, 14h
             RET
-        
-      
-                                                 
-                                                 
- 
-                                                 
+                                                         
 MOVE_PADDLE ENDP
 
 ;---------------------------------------------------
@@ -355,12 +432,12 @@ REMOVE_PADDLE_LEFT PROC
     MOV CX, PADDLE_SIZE          ; Snake size 
 
     DRAW_BODY_LEFT_X:
-        ; Set cursor position
+        ; SET CURSOR POSITION
         MOV AH, 02h             ; Function: Set cursor position
         MOV BH, 00h             ; Page number
         INT 10h
     
-        ; Print the character
+        ; PRINT THE CHARACTER
         MOV AH, 0Eh             ; Function: Print character at cursor position
         MOV AL, " "             ; Character to print
         MOV BH, 00h             ; Page number
@@ -384,12 +461,12 @@ REMOVE_PADDLE_RIGHT PROC
     MOV CX, PADDLE_SIZE          ; Snake size 
 
     DRAW_BODY_RIGHT_X:
-        ; Set cursor position
+        ; SET CURSOR POSITION
         MOV AH, 02h             ; Function: Set cursor position
         MOV BH, 00h             ; Page number
         INT 10h
     
-        ; Print the character
+        ; PRINT THE CHARACTER
         MOV AH, 0Eh             ; Function: Print character at cursor position
         MOV AL, " "             ; Character to print
         MOV BH, 00h             ; Page number
