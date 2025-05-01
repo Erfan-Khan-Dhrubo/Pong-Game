@@ -3,34 +3,51 @@
 
 .DATA
 
-RESTART_X DB 10                 ; restarting position
+RESTART_X DB 10                     ; restarting position
 RESTART_Y DB 10
 
-BALL_X DB 5                     ; Starting X (column)
-BALL_Y DB 2                     ; Starting Y (row)
+BALL_X DB 5                         ; Starting X (column)
+BALL_Y DB 2                         ; Starting Y (row)
 
-TEMP_TIME DB 0                  ; comparing time vairable
+TEMP_TIME DB 0                      ; comparing time vairable
 
-WINDOW_WIDTH DB 1Fh             ; 4Fh for full screen
+WINDOW_WIDTH DB 1Fh                 ; 4Fh for full screen
 WINDOW_HEIGHT DB 18h
 
 
-INCREMENT_POSITION_X DB 1       ; speed of ball x
-INCREMENT_POSITION_Y DB 1       ; speed of ball x
+INCREMENT_POSITION_X DB 1           ; speed of ball x
+INCREMENT_POSITION_Y DB 1           ; speed of ball x
 
 
-PADDLE_LEFT_X DB 03h            ; position of paddle right
+PADDLE_LEFT_X DB 03h                ; position of paddle right
 PADDLE_LEFT_Y DB 12h
 
 
-PADDLE_RIGHT_X DB 1Ch           ; 4Ch for full screen
-PADDLE_RIGHT_Y DB 12h           ; position of paddle left
+PADDLE_RIGHT_X DB 1Ch               ; 4Ch for full screen
+PADDLE_RIGHT_Y DB 12h               ; position of paddle left
 
 PADDLE_SIZE DW 5
 PADDLE_MOVING_SPEED DB 2
 
-COLISSION_PADDLE_LEFT_X DB ?    ; storing paddle collision info
+COLISSION_PADDLE_LEFT_X DB ?        ; storing paddle collision info
 COLISSION_PADDLE_LEFT_Y DB ?
+
+PLAYER_ONE_TEXT DB "PLAYER 1: $"    ; player text one 
+PLAYER_ONE_TEXT_X DB 2Bh            ; player text position
+PLAYER_ONE_TEXT_Y DB 05h
+
+PLAYER_ONE_SCORE DB 0               ; player point one and its postion
+PLAYER_ONE_SCORE_X DB 35h
+PLAYER_ONE_SCORE_Y DB 05h
+
+
+PLAYER_TWO_TEXT DB "PLAYER 2: $"    ; player text two
+PLAYER_TWO_TEXT_X DB 2Bh            ; player text position
+PLAYER_TWO_TEXT_Y DB 07h
+
+PLAYER_TWO_SCORE DB 0               ; player point two and its postion
+PLAYER_TWO_SCORE_X DB 35h
+PLAYER_TWO_SCORE_Y DB 07h
 
 .CODE
 
@@ -44,7 +61,9 @@ MAIN PROC
     MOV AL, 03h             ; text mode (80 columns x 25 rows)
     INT 10h                 ; video service int
     
-    
+    ; CALLING FOR PRINTING THE PLAYER TEXT
+    CALL PLAYER_SCORE_TEXT
+        
     TIME_LOOP:
     
         
@@ -70,8 +89,12 @@ MAIN PROC
         CALL MOVE_PADDLE
         
         ; DRAW THE PADDLE
-        CALL DRAW_PADDLE     
-    
+        CALL DRAW_PADDLE
+        
+        ; CALLING FOR THE PLAYER SCORE        
+        CALL PLAYER_SCORE
+        
+                 
         JMP TIME_LOOP     
                           
              
@@ -175,10 +198,10 @@ MOVE_BALL PROC
     
     ; CHECKING X-AXIS COLLISION
     CMP BALL_X, 0                     ; if ball_x < 0
-    JL BOUNCE_X_RESTART
+    JL BOUNCE_X_RESTART_LEFT
     MOV AL, WINDOW_WIDTH
     CMP BALL_X, AL                    ; if ball_x > window width
-    JG BOUNCE_X_RESTART
+    JG BOUNCE_X_RESTART_RIGHT
 
     
     
@@ -196,7 +219,17 @@ MOVE_BALL PROC
     
     ; HANDLE BOUNCES
         
-    BOUNCE_X_RESTART:
+    BOUNCE_X_RESTART_LEFT:
+        INC PLAYER_TWO_SCORE        ; increasing player 2 point if ball reach left end
+        MOV AL, RESTART_X           ; setting the ball to restart postion
+        MOV BALL_X, AL
+        MOV AL, RESTART_Y
+        MOV BALL_Y, AL
+        RET
+        
+        
+    BOUNCE_X_RESTART_RIGHT:
+        INC PLAYER_ONE_SCORE        ; increasing player 1 point if ball reach right end
         MOV AL, RESTART_X           ; setting the ball to restart postion
         MOV BALL_X, AL
         MOV AL, RESTART_Y
@@ -271,16 +304,21 @@ DRAW_PADDLE PROC
         INT 10h
     
         INC DH                 
-        LOOP DRAW_BODY_LEFT
+        LOOP DRAW_BODY_LEFT 
         
+        
+    ;---------------------------------------------------
+    
         
     ;DRAWING RIGHT PADDLE
+    
+    ; SET CURSOR POSITIO
     MOV DH, PADDLE_RIGHT_Y        ; Set row (Y-axis)
     MOV DL, PADDLE_RIGHT_X        ; Set column (X-axis)
     MOV CX, PADDLE_SIZE          ; Snake size 
 
     DRAW_BODY_RIGHT:
-        ; SET CURSOR POSITION
+        N
         MOV AH, 02h             ; Function: Set cursor position
         MOV BH, 00h             ; Page number
         INT 10h
@@ -427,12 +465,13 @@ MOVE_PADDLE ENDP
 REMOVE_PADDLE_LEFT PROC
     
     
+    ; SET CURSOR POSITION
     MOV DH, PADDLE_LEFT_Y        ; Set row (Y-axis)
     MOV DL, PADDLE_LEFT_X        ; Set column (X-axis)
     MOV CX, PADDLE_SIZE          ; Snake size 
 
     DRAW_BODY_LEFT_X:
-        ; SET CURSOR POSITION
+        
         MOV AH, 02h             ; Function: Set cursor position
         MOV BH, 00h             ; Page number
         INT 10h
@@ -453,15 +492,16 @@ REMOVE_PADDLE_LEFT ENDP
 
 ;---------------------------------------------------
 
-REMOVE_PADDLE_RIGHT PROC
+REMOVE_PADDLE_RIGHT PROC 
     
     
+    ; SET CURSOR POSITION
     MOV DH, PADDLE_RIGHT_Y        ; Set row (Y-axis)
     MOV DL, PADDLE_RIGHT_X        ; Set column (X-axis)
     MOV CX, PADDLE_SIZE          ; Snake size 
 
     DRAW_BODY_RIGHT_X:
-        ; SET CURSOR POSITION
+        
         MOV AH, 02h             ; Function: Set cursor position
         MOV BH, 00h             ; Page number
         INT 10h
@@ -481,8 +521,110 @@ REMOVE_PADDLE_RIGHT PROC
 REMOVE_PADDLE_RIGHT ENDP
 
 
+;---------------------------------------------------
+
+PLAYER_SCORE_TEXT PROC 
+    
+    ;PLAYER ONE TEXT
+    
+    ; SET CURSOR POSITION
+    MOV DH, PLAYER_ONE_TEXT_Y        ; Set row (Y-axis)
+    MOV DL, PLAYER_ONE_TEXT_X        ; Set column (X-axis)
+    
+    MOV AH, 02h                      ; Function: Set cursor position
+    MOV BH, 00h                      ; Page number
+    INT 10h
+    
+    ; PRINT THE CHARACTER
+        LEA SI, PLAYER_ONE_TEXT      ; loading the PLAYER_ONE_TEXT index location
+
+    PRINT_LOOP_ONE:
+        MOV AL, [SI]                 ; loads the value from the memory address stored in SI into register AL.
+        CMP AL, '$'                  ; if AL == $ jump exit
+        JE DONE_PRINTING_ONE
+        MOV AH, 0Eh                  ; Function: Print character at cursor position
+        INT 10h                      ; Character to prin (store in AL)
+        INC SI
+        JMP PRINT_LOOP_ONE
+        
+     
+    DONE_PRINTING_ONE:
+        
+    ;---------------------------------------------------
+        
+    ;PLAYER TWO TEXT
+    
+    ; SET CURSOR POSITION           
+    MOV DH, PLAYER_TWO_TEXT_Y        ; Set row (Y-axis)
+    MOV DL, PLAYER_TWO_TEXT_X        ; Set column (X-axis)
+    
+    MOV AH, 02h                      ; Function: Set cursor position
+    MOV BH, 00h                      ; Page number
+    INT 10h
+    
+    ; PRINT THE CHARACTER
+        LEA SI, PLAYER_TWO_TEXT
+
+    PRINT_LOOP_TWO:
+        MOV AL, [SI]
+        CMP AL, '$'
+        JE DONE_PRINTING_TWO
+        MOV AH, 0Eh                  ; Function: Print character at cursor position
+        INT 10h
+        INC SI
+        JMP PRINT_LOOP_TWO
+    
+    
+    DONE_PRINTING_TWO:
+            
+    RET
+        
+PLAYER_SCORE_TEXT ENDP
+
+;---------------------------------------------------
+
+PLAYER_SCORE PROC
+    
+    ;PLAYER ONE SCORE
+    
+    ; SET CURSOR POSITION    
+    MOV DH, PLAYER_ONE_SCORE_Y        ; Set row (Y-axis)
+    MOV DL, PLAYER_ONE_SCORE_X        ; Set column (X-axis)
+    
+    MOV AH, 02h                       ; Function: Set cursor position
+    MOV BH, 00h                       ; Page number
+    INT 10h
+    
+    
+    MOV AL, PLAYER_ONE_SCORE
+    ADD AL, 30h                       ; Convert to ASCII  ('0' = 30h)
+
+    MOV AH, 0Eh                       ; Function: Print character at cursor position      
+    INT 10h 
+    
+    ;---------------------------------------------------
+    
+    ;PLAYER ONE SCORE
+    
+    ; SET CURSOR POSITION
+    MOV DH, PLAYER_TWO_SCORE_Y        ; Set row (Y-axis)
+    MOV DL, PLAYER_TWO_SCORE_X        ; Set column (X-axis)
+    
+    MOV AH, 02h                       ; Function: Set cursor position
+    MOV BH, 00h                       ; Page number
+    INT 10h
+    
+    
+    MOV AL, PLAYER_TWO_SCORE
+    ADD AL, 30h                       ; Convert to ASCII  ('0' = 30h
+
+    MOV AH, 0Eh                       ; Function: Print character at cursor position
+    INT 10h
+           
+    
+    RET
+        
+PLAYER_SCORE ENDP
+
+
 END MAIN
-
-
-
-
