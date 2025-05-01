@@ -3,30 +3,30 @@
 
 .DATA
  
-RESTART_X DB 10                     ; restarting position
-RESTART_Y DB 10
+RESTART_X DB 14h     ;0Fc            ; restarting position
+RESTART_Y DB 0Ch
  
  
-BALL_X DB 5                         ; Starting X (column)
-BALL_Y DB 2                         ; Starting Y (row)
+BALL_X DB 14h      ;0Fc              ; Starting X (column)
+BALL_Y DB 0Ch                        ; Starting Y (row)
  
  
-TEMP_TIME DB 0                      ; comparing time vairable
+TEMP_TIME DB 0                       ; comparing time vairable
   
   
-WINDOW_WIDTH DB 1Fh                 ; 4Fh for full screen
+WINDOW_WIDTH DB 2Ah      ;1Fh        ; 4Fh for full screen
 WINDOW_HEIGHT DB 18h
 
 
-INCREMENT_POSITION_X DB 3           ; speed of ball x
-INCREMENT_POSITION_Y DB 1           ; speed of ball x
+INCREMENT_POSITION_X DB 2           ; speed of ball x
+INCREMENT_POSITION_Y DB 1           ; speed of ball y
 
 
 PADDLE_LEFT_X DB 03h                ; position of paddle right
 PADDLE_LEFT_Y DB 12h
 
 
-PADDLE_RIGHT_X DB 1Ch               ; 4Ch for full screen
+PADDLE_RIGHT_X DB 28h      ; 1Ch    ; 4Ch for full screen
 PADDLE_RIGHT_Y DB 12h               ; position of paddle left
  
  
@@ -58,14 +58,14 @@ PLAYER_TWO_SCORE_X DB 35h
 PLAYER_TWO_SCORE_Y DB 07h
         
         
-GAME_OVER_TEXT DW "GAME OVER $"
-PLAYER_ONE_WIN_TEXT DB 13, 10, "PLAYER 1 HAS WON", "$"
-PLAYER_TWO_WIN_TEXT DB 13, 10, "PLAYER 2 HAS WON", "$"
-RESTART_MESSAGE DB 13, 10, "Do you want to play again? (y/n): $"
+GAME_OVER_TEXT DW 10, "GAME OVER $"
+PLAYER_ONE_WIN_TEXT DB 13, 10, 13, 10, "PLAYER 1 HAS WON", "$"
+PLAYER_TWO_WIN_TEXT DB 13, 10, 13, 10, "PLAYER 2 HAS WON", "$"
+RESTART_MESSAGE DB 13, 10, 13, 10, "Do you want to play again? (y/n): $"
 
 
 
-WINNING_SCORE DB 02h               ; the score player needs to win
+WINNING_SCORE DB 03h               ; the score player needs to win
 
 
 .CODE
