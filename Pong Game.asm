@@ -2,20 +2,23 @@
 .STACK 100H
 
 .DATA
-
+ 
 RESTART_X DB 10                     ; restarting position
 RESTART_Y DB 10
-
+ 
+ 
 BALL_X DB 5                         ; Starting X (column)
 BALL_Y DB 2                         ; Starting Y (row)
-
+ 
+ 
 TEMP_TIME DB 0                      ; comparing time vairable
-
+  
+  
 WINDOW_WIDTH DB 1Fh                 ; 4Fh for full screen
 WINDOW_HEIGHT DB 18h
 
 
-INCREMENT_POSITION_X DB 1           ; speed of ball x
+INCREMENT_POSITION_X DB 3           ; speed of ball x
 INCREMENT_POSITION_Y DB 1           ; speed of ball x
 
 
@@ -25,29 +28,45 @@ PADDLE_LEFT_Y DB 12h
 
 PADDLE_RIGHT_X DB 1Ch               ; 4Ch for full screen
 PADDLE_RIGHT_Y DB 12h               ; position of paddle left
-
+ 
+ 
 PADDLE_SIZE DW 5
 PADDLE_MOVING_SPEED DB 2
-
+   
+   
 COLISSION_PADDLE_LEFT_X DB ?        ; storing paddle collision info
 COLISSION_PADDLE_LEFT_Y DB ?
-
-PLAYER_ONE_TEXT DB "PLAYER 1: $"    ; player text one 
+   
+   
+PLAYER_ONE_TEXT DW "PLAYER 1: $"    ; player text one 
 PLAYER_ONE_TEXT_X DB 2Bh            ; player text position
 PLAYER_ONE_TEXT_Y DB 05h
-
+   
+   
 PLAYER_ONE_SCORE DB 0               ; player point one and its postion
 PLAYER_ONE_SCORE_X DB 35h
 PLAYER_ONE_SCORE_Y DB 05h
-
-
-PLAYER_TWO_TEXT DB "PLAYER 2: $"    ; player text two
+     
+     
+PLAYER_TWO_TEXT DW "PLAYER 2: $"    ; player text two
 PLAYER_TWO_TEXT_X DB 2Bh            ; player text position
 PLAYER_TWO_TEXT_Y DB 07h
-
+       
+       
 PLAYER_TWO_SCORE DB 0               ; player point two and its postion
 PLAYER_TWO_SCORE_X DB 35h
 PLAYER_TWO_SCORE_Y DB 07h
+        
+        
+GAME_OVER_TEXT DW "GAME OVER $"
+PLAYER_ONE_WIN_TEXT DB 13, 10, "PLAYER 1 HAS WON", "$"
+PLAYER_TWO_WIN_TEXT DB 13, 10, "PLAYER 2 HAS WON", "$"
+RESTART_MESSAGE DB 13, 10, "Do you want to play again? (y/n): $"
+
+
+
+WINNING_SCORE DB 02h               ; the score player needs to win
+
 
 .CODE
 
@@ -56,13 +75,21 @@ MAIN PROC
     MOV AX, @DATA
     MOV DS, AX
      
+    START:                  ; restarting point
     
+    ; LOADING THE SCREEN
     MOV AH, 00h             ; set video mode.
     MOV AL, 03h             ; text mode (80 columns x 25 rows)
     INT 10h                 ; video service int
     
-    ; CALLING FOR PRINTING THE PLAYER TEXT
+    
+    MOV PLAYER_ONE_SCORE, 00h      ; setting the score to zero
+    MOV PLAYER_TWO_SCORE, 00h   
+    
+    
+    ; DISPLAYING THE PLAYER TEXT (NOT SCORE)
     CALL PLAYER_SCORE_TEXT
+    
         
     TIME_LOOP:
     
@@ -94,8 +121,68 @@ MAIN PROC
         ; CALLING FOR THE PLAYER SCORE        
         CALL PLAYER_SCORE
         
+        MOV CL, WINNING_SCORE
+        CMP PLAYER_ONE_SCORE, CL      ; if player 1 score == winning point
+        JE  GAME_OVER_SCREEN          
+        
+        
+        MOV CL, WINNING_SCORE
+        CMP PLAYER_TWO_SCORE, CL      ; if player 2 score == winning point
+        JE  GAME_OVER_SCREEN
+        
                  
-        JMP TIME_LOOP     
+        JMP TIME_LOOP
+        
+        
+    ;---------------------------------------------------
+        
+    GAME_OVER_SCREEN:
+    
+        ; LOADING THE SCREEN
+        MOV AH, 00h             ; set video mode.
+        MOV AL, 03h             ; text mode (80 columns x 25 rows)
+        INT 10h
+            
+            
+        ; LOADIN GAME OVER TEXT     
+        LEA DX, GAME_OVER_TEXT
+        MOV AH,09h
+        INT 21h
+            
+            
+        MOV CL, WINNING_SCORE
+        CMP PLAYER_ONE_SCORE, CL       ; if player 1 == winning point
+        JE  PLAYER_ONE_WON             ; showing player 1 win text (JUMP)
+        
+        
+        ; LOADING PLAYER TWO WIN TEXT
+        LEA DX, PLAYER_TWO_WIN_TEXT    ; else show player 2 win
+        MOV AH,09h
+        INT 21h
+        
+        JMP EXIT_OR_RESTART            ; jump to  EXIT_OR_RESTART so that player 1
+                                       ; text not printed
+                                       
+    
+        ; LOADING PLAYER ONE WIN TEXT
+        PLAYER_ONE_WON:
+            LEA DX, PLAYER_ONE_WIN_TEXT
+            MOV AH,09h
+            INT 21h
+            
+            
+        ; LOADING RESTART TEXT 
+        EXIT_OR_RESTART:
+            LEA DX, RESTART_MESSAGE
+            MOV AH,09h
+            INT 21h
+            
+            MOV AH, 08h                ; Wait for any key press, returns ASCII in AL
+            INT 21h       
+    
+            
+            CMP AL, 79h                ; if keypress letter == y (small)
+            JE START
                           
              
     ; exit
@@ -318,7 +405,7 @@ DRAW_PADDLE PROC
     MOV CX, PADDLE_SIZE          ; Snake size 
 
     DRAW_BODY_RIGHT:
-        N
+        
         MOV AH, 02h             ; Function: Set cursor position
         MOV BH, 00h             ; Page number
         INT 10h
@@ -535,17 +622,10 @@ PLAYER_SCORE_TEXT PROC
     MOV BH, 00h                      ; Page number
     INT 10h
     
-    ; PRINT THE CHARACTER
-        LEA SI, PLAYER_ONE_TEXT      ; loading the PLAYER_ONE_TEXT index location
-
-    PRINT_LOOP_ONE:
-        MOV AL, [SI]                 ; loads the value from the memory address stored in SI into register AL.
-        CMP AL, '$'                  ; if AL == $ jump exit
-        JE DONE_PRINTING_ONE
-        MOV AH, 0Eh                  ; Function: Print character at cursor position
-        INT 10h                      ; Character to prin (store in AL)
-        INC SI
-        JMP PRINT_LOOP_ONE
+    ; PRINT THE STRING         
+    LEA DX, PLAYER_ONE_TEXT          ; load the player one string
+    MOV AH,09h
+    INT 21h
         
      
     DONE_PRINTING_ONE:
@@ -562,20 +642,10 @@ PLAYER_SCORE_TEXT PROC
     MOV BH, 00h                      ; Page number
     INT 10h
     
-    ; PRINT THE CHARACTER
-        LEA SI, PLAYER_TWO_TEXT
-
-    PRINT_LOOP_TWO:
-        MOV AL, [SI]
-        CMP AL, '$'
-        JE DONE_PRINTING_TWO
-        MOV AH, 0Eh                  ; Function: Print character at cursor position
-        INT 10h
-        INC SI
-        JMP PRINT_LOOP_TWO
-    
-    
-    DONE_PRINTING_TWO:
+    ; PRINT THE STRING
+    LEA DX, PLAYER_TWO_TEXT          ; load the player one string
+    MOV AH,09h
+    INT 21h
             
     RET
         
