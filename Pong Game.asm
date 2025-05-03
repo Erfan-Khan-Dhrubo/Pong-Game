@@ -94,14 +94,14 @@ MAIN PROC
     TIME_LOOP:
     
         
-        MOV AH, 2Ch         ; Get current time
-        INT 21h
+        ;MOV AH, 2Ch         ; Get current time
+        ;INT 21h
     
-        CMP DL, TEMP_TIME   ; DL Hundredths of a second (0-99)
-        JE TIME_LOOP        ; Compare current 1/100s with TEMP TIME
+        ;CMP DL, TEMP_TIME   ; DL Hundredths of a second (0-99)
+        ;JE TIME_LOOP        ; Compare current 1/100s with TEMP TIME
     
         
-        MOV TEMP_TIME, DL   
+        ;MOV TEMP_TIME, DL   
         
         ; REMOVING THE PREVIOUS POSITION OF THE BALL
         CALL ERASE_BALL    
