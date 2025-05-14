@@ -54,3 +54,8 @@ To run the game:
 <img src="./game visualization/pic1.png">
 <img src="./game visualization/pic2.png">
 <img src="./game visualization/pic3.png">
+
+## LICENSE
+
+This project is licensed under the terms of the [MIT License](LICENSE). 
+
